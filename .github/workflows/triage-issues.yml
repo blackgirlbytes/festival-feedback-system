@@ -5,90 +5,102 @@ on:
     types: [opened]
 
 permissions:
-  issues: write
   contents: read
+  issues: write
+
+env:
+  OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+  ISSUE_NUMBER: ${{ github.event.issue.number }}
+  GH_TOKEN: ${{ github.token }}
 
 jobs:
   triage:
-    runs-on: ubuntu-latest
     name: 🤖 Goose Issue Triage
+    runs-on: ubuntu-latest
     
     steps:
-      - name: 📥 Checkout repository
+      - name: Check out repository
         uses: actions/checkout@v4
 
-      - name: 🔧 Install goose
+      - name: Gather issue information
         run: |
-          curl -fsSL https://github.com/block/goose/releases/download/stable/download_cli.sh | CONFIGURE=false bash
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          {
+            echo "# Issue Details"
+            echo "**Number:** ${{ github.event.issue.number }}"
+            echo "**Title:** ${{ github.event.issue.title }}"
+            echo ""
+            echo "**Body:**"
+            echo "${{ github.event.issue.body }}"
+          } > issue_info.txt
 
-      - name: 🏷️ Triage issue with goose
-        env:
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ISSUE_NUMBER: ${{ github.event.issue.number }}
-          ISSUE_TITLE: ${{ github.event.issue.title }}
-          ISSUE_BODY: ${{ github.event.issue.body }}
+      - name: Install goose CLI
         run: |
-          # Configure goose to use OpenRouter
+          mkdir -p /home/runner/.local/bin
+          curl -fsSL https://github.com/block/goose/releases/download/stable/download_cli.sh \
+            | CONFIGURE=false GOOSE_BIN_DIR=/home/runner/.local/bin bash
+          echo "/home/runner/.local/bin" >> $GITHUB_PATH
+
+      - name: Configure goose
+        run: |
           mkdir -p ~/.config/goose
-          cat > ~/.config/goose/config.yaml << 'EOF'
+          cat <<EOF > ~/.config/goose/config.yaml
           GOOSE_PROVIDER: openrouter
           GOOSE_MODEL: anthropic/claude-sonnet-4
-          extensions:
-            developer:
-              enabled: true
+          keyring: false
           EOF
-          
-          export GOOSE_PROVIDER=openrouter
-          export GOOSE_MODEL=anthropic/claude-sonnet-4
-          
-          # Create the triage instructions
-          cat > /tmp/triage_instructions.md << 'INSTRUCTIONS'
-          You are a festival feedback triage assistant. Analyze this GitHub issue and take action.
 
-          ## Issue Details
-          - **Number:** $ISSUE_NUMBER
-          - **Title:** $ISSUE_TITLE
-          - **Body:** $ISSUE_BODY
+      - name: Create instructions for goose
+        run: |
+          cat <<EOF > instructions.txt
+          You are a festival feedback triage assistant. Analyze this GitHub issue and take action using the shell.
+
+          $(cat issue_info.txt)
 
           ## Your Tasks
 
-          1. **Analyze** the issue content to determine:
-             - Category: Is it a bug, feature request, question, or urgent issue?
-             - Priority: high, medium, or low
-             - Sentiment: positive, negative, or neutral
+          1. **Analyze** the issue to determine:
+             - **Category:** bug, feature, question, or urgent
+             - **Priority:** high, medium, or low
+             - **Sentiment:** positive, negative, or neutral
 
-          2. **Apply labels** using the gh CLI:
-             ```
-             gh issue edit $ISSUE_NUMBER --add-label "label1,label2"
-             ```
-             
-             Available labels to apply (pick appropriate ones):
-             - `urgent` - for critical/emergency issues
-             - `bug` - for things not working
-             - `feature` - for suggestions/requests
-             - `question` - for questions
-             - `priority: high` - needs immediate attention
-             - `priority: medium` - should address soon
-             - `priority: low` - can wait
+          2. **Apply labels** using gh CLI. Pick the appropriate labels:
+             - \`urgent\` - for critical/emergency issues
+             - \`bug\` - for things not working
+             - \`feature\` - for suggestions/requests  
+             - \`question\` - for questions
+             - \`priority: high\` - needs immediate attention
+             - \`priority: medium\` - should address soon
+             - \`priority: low\` - can wait
+             - \`sentiment: positive\` - positive feedback
+             - \`sentiment: negative\` - negative feedback
+             - \`sentiment: neutral\` - neutral feedback
+             - \`triaged\` - always add this to mark as processed
 
-          3. **Add a helpful comment** using:
-             ```
-             gh issue comment $ISSUE_NUMBER --body "Your comment here"
-             ```
-             
-             Make the comment friendly and helpful with:
-             - Acknowledge the feedback
-             - Explain what category/priority was assigned
-             - Provide relevant next steps or information
-             - Use emojis for visual appeal 🎪❄️✨
+             Command: gh issue edit $ISSUE_NUMBER --add-label "label1,label2,label3"
 
-          Use the shell tool to run the gh commands. The GITHUB_TOKEN is already configured.
-          INSTRUCTIONS
+          3. **Add a helpful comment** to the issue:
+             - Acknowledge the feedback with a friendly greeting
+             - Explain what category and priority was assigned
+             - Provide helpful next steps or information
+             - Use emojis for visual appeal 🎪❄️✨🚨
 
-          # Substitute environment variables
-          envsubst < /tmp/triage_instructions.md > /tmp/triage_final.md
+             Command: gh issue comment $ISSUE_NUMBER --body "Your comment here"
+
+          Execute the gh commands to label and comment on the issue.
+          EOF
+
+      - name: Run goose to triage issue
+        run: |
+          goose run --instructions instructions.txt 2>&1 | \
+            # Remove ANSI color codes
+            sed -E 's/\x1B\[[0-9;]*[mK]//g' | \
+            # Remove session/logging lines
+            grep -v "logging to /home/runner/.config/goose/sessions/" | \
+            grep -v "^starting session" | \
+            grep -v "^Closing session" | \
+            # Trim trailing whitespace
+            sed 's/[[:space:]]*$//' \
+            > goose_output.txt
           
-          # Run goose with the instructions
-          goose run --text "$(cat /tmp/triage_final.md)"
+          echo "=== Goose Output ==="
+          cat goose_output.txt
