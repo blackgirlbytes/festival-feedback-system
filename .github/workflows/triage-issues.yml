@@ -47,12 +47,17 @@ jobs:
           GOOSE_PROVIDER: openrouter
           GOOSE_MODEL: anthropic/claude-opus-4
           keyring: false
+          extensions:
+            developer:
+              enabled: true
+              name: developer
+              type: builtin
           EOF
 
       - name: Create instructions for goose
         run: |
           cat <<EOF > instructions.txt
-          You are a festival feedback triage assistant. Analyze this GitHub issue and take action using the shell.
+          You are a festival feedback triage assistant. Analyze this GitHub issue and take action using the shell tool.
 
           $(cat issue_info.txt)
 
@@ -76,17 +81,17 @@ jobs:
              - \`sentiment: neutral\` - neutral feedback
              - \`triaged\` - always add this to mark as processed
 
-             Command: gh issue edit $ISSUE_NUMBER --add-label "label1,label2,label3"
+             Use the shell tool to run: gh issue edit $ISSUE_NUMBER --add-label "label1,label2,label3"
 
-          3. **Add a helpful comment** to the issue:
+          3. **Add a helpful comment** to the issue using the shell tool:
              - Acknowledge the feedback with a friendly greeting
              - Explain what category and priority was assigned
              - Provide helpful next steps or information
              - Use emojis for visual appeal 🎪❄️✨🚨
 
-             Command: gh issue comment $ISSUE_NUMBER --body "Your comment here"
+             Use the shell tool to run: gh issue comment $ISSUE_NUMBER --body "Your comment here"
 
-          Execute the gh commands to label and comment on the issue.
+          IMPORTANT: Use the shell tool to execute the gh commands. The GH_TOKEN environment variable is already set.
           EOF
 
       - name: Run goose to triage issue
