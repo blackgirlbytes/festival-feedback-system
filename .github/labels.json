@@ -1,0 +1,57 @@
+[
+  {
+    "name": "urgent",
+    "color": "d73a4a",
+    "description": "🚨 Critical issues needing immediate attention"
+  },
+  {
+    "name": "bug",
+    "color": "d73a4a",
+    "description": "🐛 Something isn't working correctly"
+  },
+  {
+    "name": "feature",
+    "color": "a2eeef",
+    "description": "✨ New feature request or suggestion"
+  },
+  {
+    "name": "question",
+    "color": "d876e3",
+    "description": "❓ Questions about the festival"
+  },
+  {
+    "name": "priority: high",
+    "color": "b60205",
+    "description": "🔴 Needs attention ASAP"
+  },
+  {
+    "name": "priority: medium",
+    "color": "fbca04",
+    "description": "🟡 Should be addressed soon"
+  },
+  {
+    "name": "priority: low",
+    "color": "0e8a16",
+    "description": "🟢 Can wait, nice to have"
+  },
+  {
+    "name": "sentiment: positive",
+    "color": "0e8a16",
+    "description": "😊 Positive feedback"
+  },
+  {
+    "name": "sentiment: negative",
+    "color": "d73a4a",
+    "description": "😟 Negative feedback"
+  },
+  {
+    "name": "sentiment: neutral",
+    "color": "c5def5",
+    "description": "😐 Neutral feedback"
+  },
+  {
+    "name": "triaged",
+    "color": "5319e7",
+    "description": "🤖 Processed by goose"
+  }
+]
